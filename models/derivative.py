@@ -12,7 +12,8 @@ Functions:
 """
 
 import numpy as _np
-from drawdown import data_validation as _data_validation
+from drawdown import _data_validation
+import solvers as _solvers
 
 
 """_______________________ DRAWDOWN METHODS ________________________________"""
@@ -56,9 +57,9 @@ def derivative_k(x, y, k=1, method=0):
             if method == 0:
                 ds1 = (yl[-1] - yl[0]) / dx1  # left slope using Bourdet method
             elif method == 1:
-                ds1 = MLR(xl, yl, False)[1]   # left slope using Spane method
+                ds1 = _solvers.MLR(xl, yl, False)[1]   # left slope using Spane method
             elif method == 2:
-                ds1 = L1MLR(xl, yl)[1]        # left slope using Spane modified method
+                ds1 = _solvers.L1MLR(xl, yl)[1]        # left slope using Spane modified method
 
         # Right derivative
         if i != n - 1:  # verify internal node
@@ -68,9 +69,9 @@ def derivative_k(x, y, k=1, method=0):
             if method == 0:
                 ds2 = (yr[-1] - yr[0]) / dx2  # right slope using Bourdet method
             elif method == 1:
-                ds2 = MLR(xr, yr, False)[1]   # right slope using Spane method
+                ds2 = _solvers.MLR(xr, yr, False)[1]   # right slope using Spane method
             elif method == 2:
-                ds2 = L1MLR(xr, yr)[1]        # right slope using Spane modified method
+                ds2 = _solvers.L1MLR(xr, yr)[1]        # right slope using Spane modified method
 
         # Total derivative
         if i == 0:         # left extreme derivative
@@ -81,7 +82,7 @@ def derivative_k(x, y, k=1, method=0):
             dl[i] = (ds1 * dx2 + ds2 * dx1) / (dx1 + dx2)
 
         return(dl)  # End of Function
-            
+
 
 # Drawdown derivative using L conditional
 # Inputs
@@ -119,9 +120,9 @@ def derivative_l(x, y, l=1.0, method=0):
     if method == 0:    # Bourdet method
         prd = (yr[-1] - yr[0]) / dxd
     elif method == 1:  # Spane method
-        prd = MLR(xr, yr, False)[1]
+        prd = _solvers.MLR(xr, yr, False)[1]
     elif method == 2:  # Spane modified method
-        prd = L1MLR(xr, yr)[1]
+        prd = _solvers.L1MLR(xr, yr)[1]
     dl[-1] = prd  # store last derivative
 
     # Compute internal derivative
@@ -137,9 +138,9 @@ def derivative_l(x, y, l=1.0, method=0):
             if method == 0:
                 ds1 = (yl[-1] - yl[0]) / dx1   # left slope using Bourdet method
             elif method == 1:
-                ds1 = MLR(xl, yl, False)[1]    # left slope using Spane method
+                ds1 = _solvers.MLR(xl, yl, False)[1]    # left slope using Spane method
             elif method == 2:
-                ds1 = L1MLR(xl, yl)[1]         # left slope using Spane modified method
+                ds1 = _solvers.L1MLR(xl, yl)[1]         # left slope using Spane modified method
 
         # Right derivative
         dxr = _np.abs(x[i] - x[i:])  # right difference
@@ -152,9 +153,9 @@ def derivative_l(x, y, l=1.0, method=0):
             if method == 0:
                 ds2 = (yr[-1] - yr[0]) / dx2  # right slope using Bourdet method
             elif method == 1:
-                ds2 = MLR(xr, yr, False)[1]   # right slope using Spane method
+                ds2 = _solvers.MLR(xr, yr, False)[1]   # right slope using Spane method
             elif method == 2:
-                ds2 = L1MLR(xr, yr)[1]        # right slope using Spane modified method
+                ds2 = _solvers.L1MLR(xr, yr)[1]        # right slope using Spane modified method
         elif posr.sum() > 1 and posr[-1]:     # internal right node with fixed values
             dx2 = dxd  # fixed right difference
             ds2 = prd  # fixed right derivative
@@ -163,67 +164,4 @@ def derivative_l(x, y, l=1.0, method=0):
         dl[i] = (ds1 * dx2 + ds2 * dx1) / (dx1 + dx2)
 
     return(dl)  # End Function
-
-
-"""_______________________ ADDITIONAL METHODS ______________________________"""
-
-
-# L1 Multi-linear regression
-# Input
-#   x          [ndarray] independent variable nxm
-#   y          [ndarray] dependent variable nx1
-# Output
-#   B          [ndarray] coefficients of fitted model, B[0] intercept, B[1] slope
-def L1MLR(x, y, error=1e-6):
-    # Check input data
-    x = _data_validation.to_ndarray(x)
-    y = _data_validation.to_ndarray(y)
-
-    if x.ndim == 1:  # from row vector to columns vector
-        x = x.reshape((len(x), 1))
-    n, m = x.shape  # size
-
-    # Create matrix system
-    A = _np.ones((n, m + 1))
-    A[:, 1:] = x[:]  # avoid origin interception
-    B1 = MLR(A, y, True)  # first approximation
-    B = B1 + 9999.0
-
-    # Main loop
-    while _np.max(_np.abs(B - B1)) > error:
-        B1 = B.copy()  # update coefficients
-        W = _np.abs(B1[0] + _np.dot(x, B1[1:]) - y)
-        W[W < error] = error  # replace small values
-        W = (1.0 / W) ** 0.5  # observation weights (based on residuals)
-        A1 = W[:, None] * A
-        B = MLR(A1, W * y, True)  # new coefficients
-
-    return(B)  # End of function
-
-
-# Multi-linear regression
-# Input
-#   x          [ndarray] independent variable nxm
-#   y          [ndarray] dependent variable nx1
-#   origin     [boolean] if true then intersection is fixed with origin (0,0)
-# Output
-#   coef       [ndarray] coefficients of fitted model, coef[0] intercept, coef[1] slope
-def MLR(x, y, origin=False):
-    # Check input data
-    x = _data_validation.to_ndarray(x)
-    y = _data_validation.to_ndarray(y)
-
-    if x.ndim == 1:  # from row vector to columns vector
-        x = x.reshape((len(x), 1))
-    n, m = x.shape  # size
-
-    if origin:  # origin intersection
-        A = x.copy()
-    else:       # optimize intersection
-        A = _np.ones((n, m + 1))
-        A[:, 1:] = x[:]
-
-    # Solve system
-    coef = _np.linalg.solve(A, y)
-    return(coef)  # End Function
 
