@@ -102,13 +102,19 @@ def units_conversion(x, in_unit='m3/day', out_unit='l/s'):
         raise AssertionError("Units {} can't be converted to {}".
                              format(in_unit, out_unit))
     # Convert units
-    if flag_in == 0:  # time
-        xc = x * TIME_FACTORS[in_unit[0]][out_unit[0]]
-    elif flag_in == 1:
+    if flag_in == 0:    # length
         xc = x * LEN_FACTORS[in_unit[0]][out_unit[0]]
-    else:
+    elif flag_in == 1:  # time
+        xc = x * TIME_FACTORS[in_unit[0]][out_unit[0]]
+    elif flag_in == 2:  # pumping rate
         xc = (x * VOL_FACTORS[in_unit[0]][out_unit[0]] /
               TIME_FACTORS[in_unit[1]][out_unit[1]])
+    elif flag_in == 3:  # first derivative
+        xc = (x * LEN_FACTORS[in_unit[0]][out_unit[0]] /
+              TIME_FACTORS[in_unit[1]][out_unit[1]])
+    elif flag_in == 4:  # second derivative
+        xc = (x * VOL_FACTORS[in_unit[0]][out_unit[0]] /
+              (TIME_FACTORS[in_unit[1]][out_unit[1]] ** 2.0))
     return(xc)  # units_conversion()
 
 
@@ -118,9 +124,11 @@ def units_conversion(x, in_unit='m3/day', out_unit='l/s'):
 # OUTPUT
 #  flag     [int] output flag
 #            -1  is not a valid unit
-#             0  length unit
-#             2  time unit
-#             3  volumetric unit
+#             0  length unit [length]
+#             1  time unit [time]
+#             2  pumping rate unit [length^3/time]
+#             3  first derivative unit [length/time]
+#             4  second derivative unit [length/time]
 def validate_units(unit):
     if type(unit) is not str:
         return(-1)
@@ -129,15 +137,20 @@ def validate_units(unit):
     n = len(unit)
 
     # Check available units
-    if n == 2:  # volumetric and time conversion
-        if unit[0] not in VOL_FACTORS or unit[1] not in TIME_FACTORS:
+    if n == 2:
+        if unit[0] in VOL_FACTORS and unit[1] in TIME_FACTORS:
+            return(2)  # pumping rate units
+        elif unit[0] in LEN_FACTORS and unit[1] in TIME_FACTORS:
+            return(3)  # first derivate units
+        elif unit[0] in LEN_FACTORS and unit[1] in TIME_FACTORS + '2':
+            return(4)  # second derivate units
+        else:
             return(-1)
-        return(2)
-    elif n == 1:  # length or time conversion
+    elif n == 1:
         if unit[0] in LEN_FACTORS:
-            return(0)
+            return(0)  # length units
         elif unit[0] in TIME_FACTORS:
-            return(1)
+            return(1)  # time units
         else:
             return(-1)
     else:
