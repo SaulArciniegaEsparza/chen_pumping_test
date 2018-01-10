@@ -82,14 +82,21 @@ TIME_FACTORS = {'s': {'s': 1.,
                 }
 
 
-# Units conversion for time, drawdown and volume rate
-# INPUTS
-#  x          [int, float, ndarray] input values
-#  in_unit    [string] input unit
-#  out_unit   [string] output unit
-# OUTPUTS
-#  xc         [similar as x] output value
+"""_________________________ UNITS METHODS _________________________________"""
+
+
 def units_conversion(x, in_unit='m3/day', out_unit='l/s'):
+    """
+    Units conversion for time, drawdown, drawdown derivative, and pumping rate
+
+    INPUTS:
+     x          [int, float, ndarray] input values
+     in_unit    [string] input unit
+     out_unit   [string] output unit
+    OUTPUTS:
+     xc         [similar as x] output value
+    """
+
     # Check inputs
     flag_in = validate_units(in_unit)
     flag_out = validate_units(out_unit)
@@ -102,6 +109,8 @@ def units_conversion(x, in_unit='m3/day', out_unit='l/s'):
         raise AssertionError("Units {} can't be converted to {}".
                              format(in_unit, out_unit))
     # Convert units
+    in_unit = in_unit.lower().split('/')
+    out_unit = out_unit.lower().split('/')
     if flag_in == 0:    # length
         xc = x * LEN_FACTORS[in_unit[0]][out_unit[0]]
     elif flag_in == 1:  # time
@@ -118,18 +127,21 @@ def units_conversion(x, in_unit='m3/day', out_unit='l/s'):
     return(xc)  # units_conversion()
 
 
-# Verify if an input unit is valid and return a code according to the unit type
-# INPUTS
-#  unit     [string] input unit
-# OUTPUT
-#  flag     [int] output flag
-#            -1  is not a valid unit
-#             0  length unit [length]
-#             1  time unit [time]
-#             2  pumping rate unit [length^3/time]
-#             3  first derivative unit [length/time]
-#             4  second derivative unit [length/time]
 def validate_units(unit):
+    """
+    Verify if an input unit is valid and return a code according to the unit type
+    INPUTS
+     unit     [string] input unit
+    OUTPUT
+     flag     [int] output flag
+               -1  is not a valid unit
+                0  length unit [length]
+                1  time unit [time]
+                2  pumping rate unit [length^3/time]
+                3  first derivative unit [length/time]
+                4  second derivative unit [length/time]
+    """
+
     if type(unit) is not str:
         return(-1)
 

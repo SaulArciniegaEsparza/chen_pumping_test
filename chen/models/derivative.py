@@ -6,9 +6,6 @@ Drawdown derivative methods
 Functions:
     derivative_k   > Drawdown derivative using k-neighbours
     derivative_l   > Drawdown derivative using L conditional
-
-    L1MLR          > L1 Multi-linear regression
-    MLR            > Multi-linear regression
 """
 
 import numpy as _np
@@ -19,30 +16,34 @@ import solvers as _solvers
 """_______________________ DRAWDOWN METHODS ________________________________"""
 
 
-# Drawdown derivative using k-neighbours
-# Inputs
-#   x        [list, tuple, ndarray] time vector
-#   y        [list, tuple, ndarray] drawdown vector
-#   k        [int] number of elements used for derivative estimation [i-K,i+k]
-#   method   [int] derivative method
-#             0  Bourdet (default)
-#             1  Spane using MLR
-#             2  Spane using L1MLR
-# Outputs
-#   dl       [ndarray] drawdown derivative
 def derivative_k(x, y, k=1, method=0):
+    """
+    Drawdown derivative using k-neighbours
+
+    Inputs
+      x        [list, tuple, ndarray] time vector
+      y        [list, tuple, ndarray] drawdown vector
+      k        [int] number of elements used for derivative estimation [i-K,i+k]
+      method   [int] derivative method
+                0  Bourdet (default)
+                1  Spane using MLR
+                2  Spane using L1MLR
+    Outputs
+      dl       [ndarray] drawdown derivative
+    """
+
     # Check inputs
     x, y = _data_validation.flow_conversion(x, y, scale='radial')
     k, method = int(k), int(method)
 
-    assert 1 < k < len(x), 'Parameter k must be higher than 1'
+    assert 1 <= k < len(x), 'Parameter k must be higher or equal that 1'
     assert 0 <= method <= 2, 'Wrong derivative method'
 
     n = len(x)
     dl = _np.zeros(n, dtype=_np.float32)  # derivative vector
 
     # Main loop
-    for i in xrange(n):
+    for i in range(n):
         k1, k2 = i - k, i + k
         if k1 <= 0:  # restrict left elements
             k1 = 0
@@ -81,21 +82,25 @@ def derivative_k(x, y, k=1, method=0):
         else:              # central node derivative
             dl[i] = (ds1 * dx2 + ds2 * dx1) / (dx1 + dx2)
 
-        return(dl)  # End of Function
+    return(dl)  # End of Function
 
 
-# Drawdown derivative using L conditional
-# Inputs
-#   x        [list, tuple, ndarray] time vector
-#   y        [list, tuple, ndarray] drawdown vector
-#   l        [float] interval of evaluation (log time)
-#   method   [int] derivative method
-#             0  Bourdet (default)
-#             1  Spane using MLR
-#             2  Spane using L1MLR
-# Outputs
-#   dl       [ndarray] drawdown derivative
 def derivative_l(x, y, l=1.0, method=0):
+    """
+    Drawdown derivative using L conditional
+
+    Inputs
+      x        [list, tuple, ndarray] time vector
+      y        [list, tuple, ndarray] drawdown vector
+      l        [float] interval of evaluation (log time)
+      method   [int] derivative method
+                0  Bourdet (default)
+                1  Spane using MLR
+                2  Spane using L1MLR
+    Outputs
+      dl       [ndarray] drawdown derivative
+    """
+
     # Check inputs
     x, y = _data_validation.flow_conversion(x, y, scale='radial')
     l, method = float(l), int(method)
@@ -126,7 +131,7 @@ def derivative_l(x, y, l=1.0, method=0):
     dl[-1] = prd  # store last derivative
 
     # Compute internal derivative
-    for i in xrange(1, n - 1):  # main loop
+    for i in range(1, n - 1):  # main loop
         # Left derivative
         dxl = _np.abs(x[i] - x[:(i + 1)])  # left difference
         posl = dxl <= l  # left conditional

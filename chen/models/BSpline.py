@@ -59,33 +59,36 @@ from cvxopt.solvers import options as cvoptions
 """____________________________ MAIN FUNCTION ______________________________"""
 
 
-# pp,flag = BSFK(x,y,k,nknots,constraints)
-# Least-squares fitting with Free-Knot B-Spline
-#
-#      s(x) minimizes sum [s(xi)-y(i)]**2
-#        where s(x) is a spline function
-#
-#    subject to derivative constricts at the extremes
-#          s'[0]=s11     s'[-1]=s12
-#         s''[0]=s21    s''[-1]=s22
-#
-# INPUTS
-#  x                [array] abscissa data
-#  y                [array] data function of x to be fitted by least-squares
-#  k                [int] k-1 order of the spline
-#  nknots           [int]  The number of sub-intervals between two
-#                    consecutive fixed knots (free knots)
-#  constraints      [list] n-element list of dictionaries with the derivative constraints
-#                      list = [{'p': p,'x': x,'v': v}] where p is the derivative order,
-#                             x is the array of abscissa data where the derivative
-#                             must be evaluated, and v is ordinate data
-#
-# OUTPUTS
-#  pp              [class] B-spline representation of 1-D curve (see scipy.interpolate.splrep
-#                  and scipy.interpolate.splev). pp can be evaluated using splev(x, pp)
-#                  and his derivative of order p can be computed with splev(x, pp, der=p)
-#  flag            [int] exit code, flag>0 success and flag<0 failure
 def BSFK(x, y, k, nknots, constraints):
+    """
+    pp,flag = BSFK(x,y,k,nknots,constraints)
+    Least-squares fitting with Free-Knot B-Spline
+
+         s(x) minimizes sum [s(xi)-y(i)]**2
+           where s(x) is a spline function
+
+       subject to derivative constricts at the extremes
+             s'[0]=s11     s'[-1]=s12
+            s''[0]=s21    s''[-1]=s22
+
+    INPUTS
+     x                [array] abscissa data
+     y                [array] data function of x to be fitted by least-squares
+     k                [int] k-1 order of the spline
+     nknots           [int]  The number of sub-intervals between two
+                       consecutive fixed knots (free knots)
+     constraints      [list] n-element list of dictionaries with the derivative constraints
+                         list = [{'p': p,'x': x,'v': v}] where p is the derivative order,
+                                x is the array of abscissa data where the derivative
+                                must be evaluated, and v is ordinate data
+
+    OUTPUTS
+     pp              [class] B-spline representation of 1-D curve (see scipy.interpolate.splrep
+                     and scipy.interpolate.splev). pp can be evaluated using splev(x, pp)
+                     and his derivative of order p can be computed with splev(x, pp, der=p)
+     flag            [int] exit code, flag>0 success and flag<0 failure
+    """
+
     # Check inputs
     x, y = to_numpyarrays([x, y])
     k, nknots = int(k), int(nknots)
