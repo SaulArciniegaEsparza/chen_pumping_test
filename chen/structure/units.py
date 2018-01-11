@@ -124,6 +124,8 @@ def units_conversion(x, in_unit='m3/day', out_unit='l/s'):
     elif flag_in == 4:  # second derivative
         xc = (x * VOL_FACTORS[in_unit[0]][out_unit[0]] /
               (TIME_FACTORS[in_unit[1]][out_unit[1]] ** 2.0))
+    elif flag_in == 5:  # volumeric
+        xc = x * VOL_FACTORS[in_unit[0]][out_unit[0]]
     return(xc)  # units_conversion()
 
 
@@ -140,6 +142,7 @@ def validate_units(unit):
                 2  pumping rate unit [length^3/time]
                 3  first derivative unit [length/time]
                 4  second derivative unit [length/time]
+                5  volumetric units [lenght^3]
     """
 
     if type(unit) is not str:
@@ -163,6 +166,8 @@ def validate_units(unit):
             return(0)  # length units
         elif unit[0] in TIME_FACTORS:
             return(1)  # time units
+        elif unit[0] in VOL_FACTORS:
+            return(5)  # time units
         else:
             return(-1)
     else:
