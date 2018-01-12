@@ -51,7 +51,7 @@ x, y = OW.drawdown.get_data()
 print(x, y)  # imprimir datos
 
 
-#  Agregar nuevo resultado
+# Agregar nuevo resultado
 DTYPE = 1
 NAME = 'Drawdown'
 DESC = 'Copia de abatimiento'
@@ -61,4 +61,30 @@ PARAMS = dict(model='Derivada de Bourdet',
 OW.add_data(x, y, dtype=DTYPE, name=NAME, description=DESC)
 OW_data = OW.data[-1]  # obtener ultimos datos
 OW_data.set_parameters(PARAMS)
+
+
+# Agregar nuevo piezometro
+NAME = 'Piezometer 312'
+DESC = 'Piezometro de ejemplo'
+WTYPE = 1  # definir piezometro
+PARAMS = dict(full=True,   # totalmente penetrante
+              r=50,        # distancia hasta el pozo de bombeo
+              z=15)        # profundidad de piezometro
+FILE2 = os.path.join(PATH2, 'data3.csv')  # archivo de datos
+
+PW.add_well(wtype=WTYPE, name=NAME, description=DESC)
+P = PW.wells[-1]  # obtener ultimo pozo, recien creado
+P.set_parameters(**PARAMS)
+P.drawdown.import_data_from_file(FILE2, delimiter=',')
+
+
+# Guardar todo como un diccionario
+save_dict = PW.to_dict()
+
+# Convertir unidades
+PW.convert_units(time_units='s', len_units='m', same=True)
+
+# Crear nuevo pozo de bombeo
+PW1 = PumpingWell()
+PW1.update(save_dict)
 

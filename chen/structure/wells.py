@@ -59,11 +59,43 @@ class PumpingWell(object):
         self.pump_units = pump_units
 
         # Create pumping well data
-        self.pumprate = _WellData(dtype=0, name=name, description=description)
+        self.pumprate = WellData(dtype=0, name=name, description=description)
         self.pumprate.set_units(self.time_units, self.pump_units)
 
         # Set observation wells and piezometers
         self.wells = []
+
+    def __getitem__(self, key):
+        return(self.__dict__[key])
+
+    def __repr__(self):
+        return("PumpingWell(name='{}')".format(self.pumprate.name))
+
+    def __str__(self):
+        text = "_____________Pumping well_______________\n\n"
+        text += "    Well type: {}\n".format(self._type)
+        text += "    Well name: {}\n".format(self.pumprate.name)
+        text += "  Description: {}\n".format(self.pumprate.description)
+        text += "   Time Units: {}\n".format(self.time_units)
+        text += " Length Units: {}\n".format(self.len_units)
+        text += "PumpRate Units: {}\n".format(self.pump_units)
+        text += "No Assoc Wells: {}\n".format(self.well_count())
+        text += "\n______________Pumping rate attributes\n"
+        text += "         Length: {}\n".format(len(self.pumprate.x))
+        if self.is_constant_rate():
+            text += "       Pumping: {}  {}\n".format(self.pumprate.y[0], self.pump_units)
+        else:
+            text += "      Star time: {}  {}\n".format(self.pumprate.x[0], self.time_units)
+            text += "     Final time: {}  {}\n".format(self.pumprate.x[-1], self.time_units)
+            text += "  Pumping range: {} - {}  {}\n".format(max(self.pumprate.y), min(self.pumprate.y),
+                                                           self.pump_units)
+        text += "\n_____________________Well attributes\n"
+        text += "   Full penetration: {}\n".format(self.parameters["full"])
+        text += "     Well radius rw: {} {}\n".format(self.parameters["rw"], self.len_units)
+        if not self.parameters["full"]:
+            text += "     Bottom depth l: {} {}\n".format(self.parameters["l"], self.len_units)
+            text += " Top Screen depth d: {} {}\n".format(self.parameters["d"], self.len_units)
+        return(text)
 
     def add_well(self, x=1, y=1, wtype=0, name="New well", description="Added well"):
         """
@@ -426,7 +458,7 @@ class ObservationWell(object):
                            'l': 1.}  # depth of well bottom in length units
 
         # Create drawdown data
-        self.drawdown = _WellData(dtype=1, name=name, description=description)
+        self.drawdown = WellData(dtype=1, name=name, description=description)
         self.drawdown.set_units(self.time_units, self.len_units)
 
         # Set results from models
@@ -434,6 +466,40 @@ class ObservationWell(object):
 
     def __getitem__(self, key):
         return(self.__dict__[key])
+
+    def __repr__(self):
+        if self._type == 2:
+            return("ObservationWell(name='{}')".format(self.drawdown.name))
+        else:
+            return("Piezometer(name={})".format(self.drawdown.name))
+
+    def __str__(self):
+        if self._type == 2:
+            text = "___________Observation well_____________\n\n"
+        else:
+            text = "______________Piezometer________________\n\n"
+        text += "    Well type: {}\n".format(self._type)
+        text += "    Well name: {}\n".format(self.drawdown.name)
+        text += "  Description: {}\n".format(self.drawdown.description)
+        text += "   Time Units: {}\n".format(self.time_units)
+        text += " Length Units: {}\n".format(self.len_units)
+        text += "No Assoc Data: {}\n".format(self.data_count())
+        text += "\n_______________________Drawdown attributes\n"
+        text += "         Length: {}\n".format(len(self.drawdown.x))
+        text += "      Star time: {}  {}\n".format(self.drawdown.x[0], self.time_units)
+        text += "     Final time: {}  {}\n".format(self.drawdown.x[-1], self.time_units)
+        text += " Drawdown range: {} - {}  {}\n".format(max(self.drawdown.y), min(self.drawdown.y),
+                                                        self.len_units)
+        text += "\n___________________________Well attributes\n"
+        text += " Full penetration: {}\n".format(self.parameters["full"])
+        text += "       Distance r: {} {}\n".format(self.parameters["r"], self.len_units)
+        if not self.parameters["full"]:
+            if self._type == 2:
+                text += "     Bottom depth l: {} {}\n".format(self.parameters["l"], self.len_units)
+                text += " Top Screen depth d: {} {}\n".format(self.parameters["d"], self.len_units)
+            else:
+                text += " Piezometer depth z: {} {}\n".format(self.parameters["z"], self.len_units)
+        return(text)
 
     def add_data(self, x=1, y=1, dtype=1, name="New data", description="New data"):
         """
@@ -450,7 +516,7 @@ class ObservationWell(object):
          description  [string] data description that is used as ylabel for plot
         """
         assert 1 <= dtype <= 3, "Bad value for data type"
-        new_data = _WellData(dtype, name=name, description=description)
+        new_data = WellData(dtype, name=name, description=description)
         new_data.set_data(x=x, y=y, xunits=self.time_units, yunits=self.len_units)
         self.data.append(new_data)
 
@@ -703,7 +769,7 @@ class ObservationWell(object):
         # Update data
         if "data" in new_data:
             n = len(new_data["data"])
-            if n > 1:
+            if n > 0:
                 self.reset_data()
                 for i in range(n):
                     self.add_data(0, 0)
@@ -814,22 +880,23 @@ class Piezometer(ObservationWell):
                            'z': 1.}  # piezometer depth in length units
 
         # Set data
-        self.data.name = name
-        self.data.description = description
+        self.name = name
+        self.description = description
 
         self.time_units = time_units
         self.len_units = len_units
 
         # Create drawdown data
-        self.drawdown = _WellData(dtype=1, name=name, description=description)
+        self.drawdown = WellData(dtype=1, name=name, description=description)
         self.drawdown.set_units(self.time_units, self.len_units)
 
 
 """__________________________ WELL DATA CLASS _______________________________"""
 
 
-class _WellData(object):
-    def __init__(self, dtype=0, name="data", description=""):
+class WellData(object):
+    def __init__(self, dtype=0, name="data", description="", xunits="s",
+                 yunits="m"):
         """
         Create well data class for storage data and results
 
@@ -841,6 +908,8 @@ class _WellData(object):
                        3     drawdown second derivative
          name         [string] data name that is used as label for plot
          description  [string] data description that is used as ylabel for plot
+         xunits       [string] time units
+         yunits       [string] data units
         """
 
         # Data parameters
@@ -851,8 +920,8 @@ class _WellData(object):
         # Set data
         self.x = _np.array([], dtype=_np.float32)
         self.y = _np.array([], dtype=_np.float32)
-        self.xunits = 's'
-        self.yunits = 'm'
+        self.xunits = xunits
+        self.yunits = yunits
 
         # Set model params
         self._model_params = {}
@@ -872,6 +941,26 @@ class _WellData(object):
         elif key == 'plot_options':
             key = '_graph'
         return(obj.get(key, None))
+
+    def __repr__(self):
+        return("WellData(dtype={}, name='{}')".format(self.dtype, self.name))
+
+    def __str__(self):
+        text = "________________Well Data_______________\n\n"
+        text += "  Data type: {}  ({})\n".format(self.dtype, self.get_data_type())
+        text += "  Well name: {}\n".format(self.name)
+        text += "Description: {}\n".format(self.description)
+        text += " Time Units: {}\n".format(self.xunits)
+        text += " Data Units: {}\n".format(self.yunits)
+        text += " Data attributes _______________________\n"
+        text += "      Length: {}\n".format(len(self.x))
+        text += "   Star time: {}\n".format(self.x[0])
+        text += "  Final time: {}\n".format(self.x[-1])
+        text += "  Data range: {} - {}\n".format(max(self.y), min(self.y))
+        text += " Parameters ____________________________\n"
+        for key, value in self._model_params.items():
+            text += "  {}: {}\n".format(key, value)
+        return(text)
 
     def convert_units(self, xunits=None, yunits=None):
         """
@@ -1127,8 +1216,8 @@ class _WellData(object):
         for key in keys:
             fixed[key] = new_data.get(key, original.get(key))
         if type(fixed["x"]) is not _np.ndarray:
-            fixed["x"] = _np.ndarray(fixed["x"], dtype=_np.float32)
+            fixed["x"] = _np.array(fixed["x"], dtype=_np.float32)
         if type(fixed["y"]) is not _np.ndarray:
-            fixed["y"] = _np.ndarray(fixed["y"], dtype=_np.float32)
+            fixed["y"] = _np.array(fixed["y"], dtype=_np.float32)
         self.__dict__.update(fixed)
 
