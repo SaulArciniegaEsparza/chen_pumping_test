@@ -3,6 +3,3 @@
 Drawdown methods initialization
 """
 
-import derivative
-import smooth
-

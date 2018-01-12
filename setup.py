@@ -10,5 +10,9 @@ setup(
     author='Saul Arciniega Esparza',
     author_email='zaul.ae@gmail.com',
     description='Pumping test analysis for parameter estimation and drawdown interpretation',
-    classifiers=['Topic :: Civil Engineer ::  Hydrology :: Physics']
+    classifiers=['Topic :: Civil Engineer ::  Hydrology :: Physics'],
+    install_requires=['numpy',
+                      'scipy',
+                      'cvxopt']
 )
+
