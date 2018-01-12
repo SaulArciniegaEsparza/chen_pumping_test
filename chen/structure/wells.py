@@ -14,6 +14,40 @@ import units as _units
 class PumpingWell(object):
     def __init__(self, name="", description="", time_units="s", len_units="m",
                  pump_units="m3/s"):
+        """
+        Create a pumping rate well
+
+        ATTRIBUTES:
+            name:         [string] pumping well name that is used in plots
+            description:  [string] short well description
+            time_units:   [string] time units for this well and associated data
+            len_units:    [string] length units for this well and associated data
+            pump_units:   [string] pumping rate units
+            parameters:   dictionary that contains the well parameters
+                 rw       [float] well radius in longitude units
+                 d        [float] depth of well screen (from top) in length units
+                 l        [float] depth of well bottom screen in length units
+            pumprate:     data object that contains the drawdown data
+            wells:        [list] contains data objects with the results of applied models
+
+        Creating a new well:
+        well = PumpingWell(name="Well 1", description="First well added", time_units="s",
+                           len_units="m", pump_units="m3/s")
+        well.pumprate.set_data(x, y)
+        well.set_parameters(rw=0.8, d=5., l=15., full=False)
+
+        Optionally:
+        well = PumpingWell(name="Well 1", description="First well added", time_units="s",
+                           len_units="m", pump_units="m3/s")
+        well.pumprate.set_data(x, y)
+        well.set_parameters(rw=0.8, d=5., l=15., full=False)
+
+        Adding new observation well:
+        well.add_well(x, y, wtype=0, name="New well", description="Added well")
+        Adding new piezometer:
+        well.add_well(x, y, wtype=1, name="New Piezometer", description="Added piezometer")
+        """
+
         # Set general info
         self._type = 1  # pumping well id
         self.parameters = {'full': True,
@@ -31,7 +65,7 @@ class PumpingWell(object):
         # Set observation wells and piezometers
         self.wells = []
 
-    def add_well(self, x, y, wtype=0, name="New well", description="Added well", ):
+    def add_well(self, x=1, y=1, wtype=0, name="New well", description="Added well"):
         """
         Add new observation well or piezometer object to the actual pumping well
 
@@ -45,11 +79,14 @@ class PumpingWell(object):
          description  [string] well description
         """
         if wtype == 0:
-            new_well = ObservationWell(name, description)
-        else:
+            new_well = ObservationWell(name, description, time_units=self.time_units,
+                                       len_units=self.len_units)
+        elif wtype == 1:
             new_well = Piezometer(name, description)
-        new_well.drawdown.set_data(x=x, y=y, xunits=self.time_units, yunits=self.len_units)
-        self.data.append(new_well)
+        else:
+            raise ValueError('Bad wtype value <{}>'.format(wtype))
+        new_well.drawdown.set_data(x=x, y=y)
+        self.wells.append(new_well)
 
     def convert_units(self, time_units=None, len_units=None, pump_units=None,
                       same=False):
@@ -138,7 +175,20 @@ class PumpingWell(object):
         self.wells = []
 
     def get_plot_options(self):
-        pass
+        """
+        Returns a list of plot options with the visible data to be plotted
+        including pumping well, observation well or piezometer drawdown
+        """
+        plot_options = []
+        # Get pumping rate plot options
+        op = self.pumprate.get_plot_options()
+        if op['visible']:
+            plot_options.append(op)
+        # Get associated data options
+        for i in range(self.well_count()):
+            well_options = self.wells[i].get_plot_options()
+            plot_options.extend(well_options)
+        return(plot_options)
 
     def get_well_id(self, name):
         """
@@ -181,8 +231,47 @@ class PumpingWell(object):
         else:
             raise ValueError('Pumping rate is incorrect, check the assigned values!')
 
+    def set_parameters(self, full=None, rw=None, l=None, d=None):
+        """
+        Set well attributes
+
+        INPUTS:
+         full   [bool] if True, well is full penetrating and depth
+                 parameters are ignored in computation
+         rw     [float] well radius in length units
+         l      [float] depth from water table to well bottom in length units
+         d      [float] depth from water table to well top screen in length units
+        """
+
+        original = _deepcopy(self.parameters)  # save in case of error
+
+        if type(full) is bool:
+            self.parameters["full"] = full
+        if type(rw) in (int, float):
+            self.parameters["rw"] = float(rw)
+        if type(d) in (int, float):
+            self.parameters["d"] = float(d)
+        if type(l) in (int, float):
+            self.parameters["l"] = float(l)
+
+        flag, message = self.validate_parameters()
+        if not flag:
+            print(message)
+            self.parameters.update(original)
+        # End Function
+
     def to_dict(self):
-        pass
+        """
+        Returns a list of dictionaries containing all the data in
+        the well that can be used to storage the data as json format
+        """
+        out_dict = _deepcopy(self.__dict__)
+        out_dict["pumprate"] = self.pumprate.to_dict()
+        out_wells = []
+        for i in range(self.well_count()):
+            out_wells.append(self.wells[i].to_dict())
+        out_dict["wells"] = out_wells
+        return(out_dict)
 
     def to_model(self):
         """
@@ -190,13 +279,34 @@ class PumpingWell(object):
         needed for analysis models in chen
         """
         out_dict = _deepcopy(self.parameters)
-        out_dict["x"] = self.drawdown.x.copy()
-        out_dict["y"] = self.drawdown.y.copy()
+        out_dict["x"] = self.pumprate.x.copy()
+        out_dict["y"] = self.pumprate.y.copy()
         out_dict["wtype"] = 1
-        return (out_dict)
+        return(out_dict)
 
-    def update(self):
-        pass
+    def update(self, new_data):
+        """
+        Updates the pumping well object using an input dictionary
+        """
+        if type(new_data) is not dict:
+            raise TypeError("Input parameter must be a dict")
+        # Update parameters
+        self._type = new_data.get("_type", self._type)
+        self.time_units = new_data.get("time_units", self.time_units)
+        self.len_units = new_data.get("len_units", self.len_units)
+        self.pump_units = new_data.get("pump_units", self.pump_units)
+        self.parameters = new_data.get("parameters", self.parameters)
+        # Update pumping rate
+        self.pumprate.update(new_data.get("pumprate", self.pumprate.to_dict()))
+        # Update data
+        if "wells" in new_data:
+            n = len(new_data["wells"])
+            if n > 1:
+                self.delete_all_wells()
+                for i in range(n):
+                    self.add_well(0, 0, new_data["wells"][i]["_type"] - 2)
+                    self.wells[i].update(new_data["wells"][i])
+        # End Function
 
     def validate_parameters(self):
         """
@@ -223,7 +333,7 @@ class PumpingWell(object):
         # Check if is full penetrating
         op = self.parameters.get('full', False)
 
-        if ~op:
+        if not op:
             # Check observation well length
             if 'd' in self.parameters and 'l' in self.parameters:
                 d = self.parameters.get('d', -1)
@@ -275,14 +385,16 @@ class ObservationWell(object):
         Create an observation well object
 
         ATTRIBUTES:
-            time_units: string with the time units for this well and associated data
-            len_units:  string with the length units for this well and associated data
-            parameters: dictionary that contains the well parameters
-                 r     [float] radial distance to pumping well in longitude units
-                 d     [float] depth of well screen (from top) in length units
-                 l     [float] depth of well bottom screen in length units
-            drawdown:  data object that contains the drawdown data
-            drawdown:  list that contains data objects with the results of applied models
+            name:         [string] well name that is used in plots
+            description:  [string] short well description
+            time_units:   [string] time units for this well and associated data
+            len_units:    [string] length units for this well and associated data
+            parameters:   [dict] dictionary that contains the well parameters
+                 r         [float] radial distance to pumping well in longitude units
+                 d         [float] depth of well screen (from top) in length units
+                 l         [float] depth of well bottom screen in length units
+            drawdown:    data object that contains the drawdown data
+            data:        [list] contains data objects with the results of applied models
 
         Creating a new well:
         well = ObservationWell(name='Well 1', description='First well added')
@@ -295,8 +407,12 @@ class ObservationWell(object):
         well.set_parameters(r=50., d=5., l=15., full=False)
 
         Adding new data:
+        well.add_data(x, model, dtype=1, name="Theis",
+                      description="Theis method simulation")
         well.add_data(x, derivative, dtype=2, name="ds/dt Bourdet",
                       description="First derivative with Bourdet method")
+        well.add_data(x, derivative, dtype=3, name="d2s/dt2 Bourdet",
+                      description="Second derivative with Bourdet")
         """
 
         # Set general info
@@ -319,7 +435,7 @@ class ObservationWell(object):
     def __getitem__(self, key):
         return(self.__dict__[key])
 
-    def add_data(self, x, y, dtype=1, name="New data", description="New data"):
+    def add_data(self, x=1, y=1, dtype=1, name="New data", description="New data"):
         """
         Add new data object to the actual observation well or piezometer
 
@@ -496,6 +612,18 @@ class ObservationWell(object):
         """
         self.data = []
 
+    def set_as_drawdown(self, idx):
+        """
+        Replaces the well drawdown given the index of a drawdown data
+        in data list
+        """
+        dtype = self.get_data_type(idx)
+        if dtype == "Pumping rate":
+            x, y = self.data[idx].get_data()
+            self.drawdown.set_data(x, y)
+        else:
+            raise TypeError('Selected data is not drawdown!')
+
     def set_parameters(self, full=None, r=None, l=None, d=None, z=None):
         """
         Set well or piezometer parameters
@@ -527,7 +655,7 @@ class ObservationWell(object):
                 self.parameters["z"] = float(z)
 
         flag, message = self.validate_parameters()
-        if flag == 0:
+        if not flag:
             print(message)
             self.parameters.update(original)
         # End Function
@@ -566,10 +694,10 @@ class ObservationWell(object):
         if type(new_data) is not dict:
             raise TypeError("Input parameter must be a dict")
         # Update parameters
-        self._type = new_data("_type", self._type)
-        self.time_units = new_data("time_units", self.time_units)
-        self.len_units = new_data("len_units", self.len_units)
-        self.parameters = new_data("parameters", self.parameters)
+        self._type = new_data.get("_type", self._type)
+        self.time_units = new_data.get("time_units", self.time_units)
+        self.len_units = new_data.get("len_units", self.len_units)
+        self.parameters = new_data.get("parameters", self.parameters)
         # Update drawdown
         self.drawdown.update(new_data.get("drawdown", self.drawdown.to_dict()))
         # Update data
@@ -606,7 +734,7 @@ class ObservationWell(object):
         # Check if is full penetrating
         op = self.parameters.get('full', False)
 
-        if ~op:
+        if not op:
             # Check observation well length
             if 'd' in self.parameters and 'l' in self.parameters:
                 d = self.parameters.get('d', -1)
@@ -647,28 +775,36 @@ class Piezometer(ObservationWell):
         Create a piezometer object (works similar to Observation well)
 
         ATTRIBUTES:
-            time_units: string with the time units for this well and associated data
-            len_units:  string with the length units for this well and associated data
-            parameters: dictionary that contains the well parameters
-                 r     [float] radial distance to pumping well in longitude units
-                 z     [float] piezometer depth in length units
-            drawdown:  data object that contains the drawdown data
-            drawdown:  list that contains data objects with the results of applied models
+            name:         [string] piezometer name that is used in plots
+            description:  [string] short piezometer description
+            time_units:   [string] time units for this piezometer and associated data
+            len_units:    [string] length units for this piezometer and associated data
+            parameters:   [dict] dictionary that contains the piezometer parameters
+                 r         [float] radial distance to pumping well in longitude units
+                 z         [float] piezometer depth in length units
+            drawdown:    data object that contains the drawdown data
+            data:        [list] contains data objects with the results of applied models
 
         Creating a new well:
-        well = Piezometer(name='Piezometer 1', description='First piezometer added')
-        well.drawdown.set_data(x, y, xunits='min', yunits='m')
-        well.set_parameters(r=50., d=5., l=15., full=False)
+        well = Piezometer(name="Piezometer 1", description="First piezometer added",
+                          time_units="s", len_units="m")
+        well.drawdown.set_data(x, y)
+        well.set_parameters(r=50., z=15., full=False)
 
         Optionally:
-        well = Piezometer(name='Piezometer 1', description='First piezometer added')
-        well.drawdown.import_data_from_file(filename, delimiter=',', skip_header=1, xunits='min', yunits='m')
+        well = Piezometer(name="Piezometer 1", description="First piezometer added",
+                          time_units="s", len_units="m")
+        well.drawdown.import_data_from_file(filename, delimiter=',', skip_header=1)
         well.set_parameters(r=50., d=5., l=15., full=False)
 
         Adding new data:
+        well.add_data(x, model, dtype=1, name="Theis",
+                      description="Theis method simulation")
         well.add_data(x, derivative, dtype=2, name="ds/dt Bourdet",
                       description="First derivative with Bourdet method")
-                """
+        well.add_data(x, derivative, dtype=3, name="d2s/dt2 Bourdet",
+                      description="Second derivative with Bourdet")
+        """
         super(Piezometer, self).__init__()
 
         # Set general info
@@ -687,28 +823,6 @@ class Piezometer(ObservationWell):
         # Create drawdown data
         self.drawdown = _WellData(dtype=1, name=name, description=description)
         self.drawdown.set_units(self.time_units, self.len_units)
-
-
-# Pumping well default parameters
-# Creates a dictionary with default parameters for a pumping well
-# Parameters:
-#  t     [float, ndarray] time
-#  Q     [float, ndarray] pumping rate
-#  rw    [float] well radius in longitude units
-#  d     [float] depth of well screen (from top) as percentage between 0 and 1
-#  l     [float] depth of well bottom screen as percentage between 0 and 1
-# NOTES: if t and Q are floats, then a constant rate is used. If t and Q are
-# ndarrays, then multiple pumping rate is used (Only few models used multiple flow)
-# parameters d and l are represented as percentage of the aquifer thickness,
-# then d+l=1.0, if not a error is raised
-def pumpwell_parameters():
-    parameters = {'type': "pumpwell",
-                  't':    0.,
-                  'Q':    1.,
-                  'rw':   1.,
-                  'd':    0.,
-                  'l':    1.}
-    return(parameters)  # End Function
 
 
 """__________________________ WELL DATA CLASS _______________________________"""
@@ -801,9 +915,9 @@ class _WellData(object):
         if self.dtype == 0:
             return("Pumping rate")
         elif self.dtype == 1:
-            return ("Drawdown")
+            return("Drawdown")
         else:
-            return ("Drawdown derivative")
+            return("Drawdown derivative")
 
     def get_parameters(self):
         """
@@ -824,10 +938,11 @@ class _WellData(object):
         options['label'] = self.name
         options['xlabel'] = 'Time (%s)' % (self.xunits)
         options['ylabel'] = '%s (%s)' % (self.get_data_type(), self.yunits)
-        return (options)
+        options['dtype'] = self.dtype
+        return(options)
 
     def import_data_from_file(self, filename, delimiter=',', skip_header=1,
-                              xunits='s', yunits='m'):
+                              xunits=None, yunits=None):
         """
         Load time and data from a delimited file
 
@@ -839,12 +954,16 @@ class _WellData(object):
           xunits             [string] time units
           yunits             [string] data units
         """
+        if xunits is None:
+            xunits = self.xunits
+        if yunits is None:
+            yunits = self.yunits
         data = _np.genfromtxt(filename, dtype=_np.float32,
                               delimiter=delimiter, skip_header=skip_header)
         self.set_data(data=data, xunits=xunits, yunits=yunits)
         # End Function
 
-    def set_data(self, x=None, y=None, data=None, xunits='s', yunits='m'):
+    def set_data(self, x=None, y=None, data=None, xunits=None, yunits=None):
         """
         Set data from x and y one-dimension arrays or form a two-dimension array
 
@@ -852,12 +971,17 @@ class _WellData(object):
          x       [int, float, list, tuple, ndarray] one-dimension time data
          y       [int, float, list, tuple, ndarray] one-dimension pumping rate or drawdown data
          data    [list, tuple, ndarray] two-dimension data array [time, data]
-         xunits  [string] time units
-         yunits  [string] data units, must be consistent with data type
+         xunits  [string] time units. If None, original units are used
+         yunits  [string] data units, must be consistent with data type.
+                  If None, original units are used
         NOTE: x and y must be input at the same time
         """
 
         # Set units to data
+        if xunits is None:
+            xunits = self.xunits
+        if yunits is None:
+            yunits = self.yunits
         self.set_units(xunits, yunits)
         # Check inputs
         if x is not None and y is not None:
@@ -902,7 +1026,7 @@ class _WellData(object):
 
         # Check x and y size
         if x.size != y.size:
-            return AssertionError('x and y must have the same size <{},{}>'.
+            raise AssertionError('x and y must have the same size <{},{}>'.
                                   format(x.size, y.size))
         # Save data
         self.x, self.y = x, y
@@ -939,6 +1063,12 @@ class _WellData(object):
         else:
             self.yunits = yunits
         # End Function
+
+    def set_parameters(self, new_params):
+        """
+        Replaces the old parameters associated to data
+        """
+        self._model_params = _deepcopy(new_params)
 
     def set_plot_options(self, color=None, symbol=None, line=None,
                          width=None, visible=None):
