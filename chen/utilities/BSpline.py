@@ -24,6 +24,8 @@ scipy    version 0.17.0
 cvxopt   version 1.1.9
 
 
+
+
 Authors:
 
 SAUL ARCINIEGA ESPARZA

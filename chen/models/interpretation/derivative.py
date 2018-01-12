@@ -6,11 +6,25 @@ Drawdown derivative methods
 Functions:
     derivative_k   > Drawdown derivative using k-neighbours
     derivative_l   > Drawdown derivative using L conditional
+
+
+
+Authors:
+
+SAUL ARCINIEGA ESPARZA
+Institute of Engineering of UNAM
+zaul.ae@gmail.com
+
+JOSUE TAGO PACHECO
+Earth Sciences Division, Faculty of Engineering, UNAM
+josue.tago@gmail.com
+
+ANTONIO HERNANDEZ ESPRIU
+Hydrogeology Group, Earth Sciences Division, Faculty of Engineering UNAM
+ahespriu@unam.mx
 """
 
 import numpy as _np
-from drawdown import _data_validation
-import linear_regression as _solvers
 
 
 """_______________________ DRAWDOWN METHODS ________________________________"""

@@ -1,19 +1,33 @@
 # -*- coding: utf-8 -*-
 """
 CHEN pumping test analysis
-Drawdown derivative methods
+Data Smooth with different techniques
 
 Functions:
-    derivative_k   > Drawdown derivative using k-neighbours
+    simple_smooth   > moving average data smoothing
+    CQBSFK          > data smoothing using B-Spline approach
+
+
+
+Authors:
+
+SAUL ARCINIEGA ESPARZA
+Institute of Engineering of UNAM
+zaul.ae@gmail.com
+
+JOSUE TAGO PACHECO
+Earth Sciences Division, Faculty of Engineering, UNAM
+josue.tago@gmail.com
+
+ANTONIO HERNANDEZ ESPRIU
+Hydrogeology Group, Earth Sciences Division, Faculty of Engineering UNAM
+ahespriu@unam.mx
 """
 
 import numpy as _np
 from scipy.interpolate import splev as _splev
 
-from drawdown import _data_validation
-import linear_regression as _solvers
 import derivative as _derivative
-from BSpline import BSFK
 
 
 """_________________________ SMOOTH DATA ___________________________________"""
@@ -139,7 +153,7 @@ def CQBSFK(x, y, shape=0, l=0.5, dB=None):
                 'x': [logx[0], logx[1], logx[-1]],
                 'v': [dB2[0], dB2[1], dB2[-1]]}
                ]
-    pp, flag = BSFK(logx, y, k, nknots, con)
+    pp, flag = _BSFK(logx, y, k, nknots, con)
 
     if flag > 0:
         y_smooth = _splev(logx, pp, der=0)

@@ -11,6 +11,8 @@ CLASSES:
 See help for more information about how to work with each object
 PumpingWell is the main object, so it would be created in first instance
 
+
+
 Autor:
 Saul Arciniega Esparza
 zaul.ae@gmail.com
@@ -20,7 +22,6 @@ Mexico City, Mexico
 
 import numpy as _np
 from copy import deepcopy as _deepcopy
-import units as _units
 
 
 """____________________________ WELL OBJECTS _______________________________"""
