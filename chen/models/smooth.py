@@ -11,7 +11,7 @@ import numpy as _np
 from scipy.interpolate import splev as _splev
 
 from drawdown import _data_validation
-import solvers as _solvers
+import linear_regression as _solvers
 import derivative as _derivative
 from BSpline import BSFK
 

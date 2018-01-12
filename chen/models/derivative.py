@@ -10,7 +10,7 @@ Functions:
 
 import numpy as _np
 from drawdown import _data_validation
-import solvers as _solvers
+import linear_regression as _solvers
 
 
 """_______________________ DRAWDOWN METHODS ________________________________"""

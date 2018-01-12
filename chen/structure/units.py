@@ -11,6 +11,12 @@ Constants:
 Functions:
     units_conversion  > Units conversion for time, drawdown and pumping rate
     validate_units    > Verify if an input unit is valid and return a code according to the unit type
+
+Autor:
+Saul Arciniega Esparza
+zaul.ae@gmail.com
+Institute of Engineering of UNAM
+Mexico City, Mexico
 """
 
 """_________________________ UNITS FACTORS _________________________________"""

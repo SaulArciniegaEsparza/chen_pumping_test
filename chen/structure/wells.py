@@ -1,6 +1,21 @@
 """
 CHEN pumping test analysis
 Pumping well and observation well properties
+
+CLASSES:
+    PumpingWell       > Pumping well object that could contain one or more Observation wells or piezometers
+    ObservationWell   > Observation well that contains drawdown data
+    Piezometer        > Piezometer well that contains drawdown data
+    WellData          > Object used to store different data (pumping rate, drawdown, first and second derivative)
+
+See help for more information about how to work with each object
+PumpingWell is the main object, so it would be created in first instance
+
+Autor:
+Saul Arciniega Esparza
+zaul.ae@gmail.com
+Institute of Engineering of UNAM
+Mexico City, Mexico
 """
 
 import numpy as _np
@@ -987,6 +1002,24 @@ class WellData(object):
         # Storage converted data
         self.set_data(x, y, xunits=xunits, yunits=yunits)
         # End Function
+
+    def filter_time(self, start=None, end=None):
+        """
+        Extracts the data contained between a range of time.
+
+        INPUTS:
+          start      [float] initial time in the same units that data.
+                      If None, start parameter is ignored.
+          end        [end] final time in the same units that data
+                      If None, end parameter is ignored.
+        """
+        if start is None:
+            start = self.x[0]
+        if end is None:
+            end = self.x[-1]
+        pos = _np.where((start <= self.x) & (self.x <= end))[0]
+        if len(pos) > 0:
+            self.set_data(self.x[pos], self.y[pos])
 
     def get_data(self):
         """
