@@ -10,15 +10,36 @@ Institute of Engineering of UNAM
 Mexico City, Mexico
 """
 
+from copy import deepcopy as _deepcopy
 import wells as _wells
+from data import Data as _Data
 
 
 """____________________________ WELL OBJECTS _______________________________"""
 
 
+# Define default aquifer parameters
+AQ_PARAMS = {'T': None,
+             'K': None,
+             'S': None,
+             'b': 10.,
+             'Kzr:': 10.}
+
+
 class Aquifer(object):
+
     def __init__(self, name="Aquifer", description="", time_units="s",
                  len_units="m", pump_units="m3/s", **kwargs):
+        """
+
+        ATRIBUTES:
+            atype           [int] aquifer identifier
+                             0  undefined aquifer (default)
+                             1  confined aquifer
+                             2  leaky aquifer
+                             3  unconfined aquifer
+        """
+
         # Set attributes
         self._type = 0  # object identifier
         self.atype = 0  # aquifer identifier
@@ -30,21 +51,24 @@ class Aquifer(object):
         self.pump_units = pump_units
 
         # Set aquifer parameters
-        self.parameters = {'T': kwargs.get('T', None),  # Transmisivity
-                           'S': kwargs.get('S', None),  # Specific yield
-                           'K': kwargs.get('K', None),  # Horizontal hydraulic conductivity (Kh)
-                           'b': kwargs.get('b', None),  # Aquifer thickness
-                           'Kzr': kwargs.get('Kzr', None)}  # Vertical anisotropy (Kzr=Kv/Kh)
+        self.parameters = {'T': kwargs.get('T', AQ_PARAMS['T']),  # Transmisivity
+                           'S': kwargs.get('S', AQ_PARAMS['S']),  # Specific yield
+                           'K': kwargs.get('K', AQ_PARAMS['K']),  # Horizontal hydraulic conductivity (Kh)
+                           'b': kwargs.get('b', AQ_PARAMS['b']),  # Aquifer thickness
+                           'Kzr': kwargs.get('Kzr', AQ_PARAMS['Kzr'])}  # Vertical anisotropy (Kzr=Kv/Kh)
 
-        # Associated wells list
-        self.wells = []
+        # Associated wells and data list
+        self.wells = []  # wells objects
+        self.data = []   # model results
 
     def __str__(self):
         if self.atype == 0:
-            text = '__________________Confined Aquifer___________________\n'
+            text = '_______________________Aquifer______________________\n'
         elif self.atype == 1:
-            text = '____________________Leaky Aquifer____________________\n'
+            text = '__________________Confined Aquifer___________________\n'
         elif self.atype == 2:
+            text = '____________________Leaky Aquifer____________________\n'
+        elif self.atype == 3:
             text = '_________________Unconfined Aquifer__________________\n'
         text += '   Aquifer code: {}\n'.format(self.atype)
         text += '           Name: {}\n'.format(self.name)
@@ -58,84 +82,196 @@ class Aquifer(object):
                                                             '%s2/%s' % (self.len_units, self.time_units))
         text += '        Hydraulic Cond K: {}  {}\n'.format(self.parameters.get('K', None),
                                                             '%s/%s' % (self.len_units, self.time_units))
-        text += '        Specific yield S: {}'.format(self.parameters.get('S', None))
-        text += '     Aquifer Thickness b: {}  {}'.format(self.parameters.get('b', None), self.len_units)
-        text += ' Vertical anisotropy Kzr: {}'.format(self.parameters.get('Kzr', None))
-        if self.atype == 1:
-            text += 'Aquitard conductivity Kl: {}  {}'.format(self.parameters.get('Kl', None),
-                                                              '%s/%s' % (self.len_units, self.time_units))
-            text += 'Aquitard conductivity Kl: {}  {}'.format(self.parameters.get('Kl', None),
-                                                              '%s/%s' % (self.len_units, self.time_units))
-        if self.atype == 2:
-            pass
+        text += '        Specific yield S: {}\n'.format(self.parameters.get('S', None))
+        text += '     Aquifer Thickness b: {}  {}\n'.format(self.parameters.get('b', None), self.len_units)
+        text += ' Vertical anisotropy Kzr: {}\n'.format(self.parameters.get('Kzr', None))
+        for key, value in self.parameters.items():
+            if key not in AQ_PARAMS.keys():
+                text += '      Model parameter {}: {}\n'.format(key, value)
         return(text)
 
     def __getitem__(self, key):
         return(self.__dict__.get(key, None))
 
     def __repr__(self):
-        if self.atype == 0:
-            raise('ConfinedAquifer(name={})'.format(self.name))
-        elif self.atype == 1:
-            raise('LeakyAquifer(name={})'.format(self.name))
+        if self.atype == 1:
+            return('ConfinedAquifer(name={})'.format(self.name))
         elif self.atype == 2:
-            raise('UnconfinedAquifer(name={})'.format(self.name))
+            return('LeakyAquifer(name={})'.format(self.name))
+        elif self.atype == 3:
+            return('UnconfinedAquifer(name={})'.format(self.name))
         else:
-            return('ErrorElement!')
+            return ('UndefinedAquifer(name={})'.format(self.name))
 
-    def add_well(self):
+    def add_well(self, x=1, y=1, name="New well", description="Added well"):
+        """
+        Add new pumping well object to the actual aquifer
+
+        INPUTS
+         x            [int, float, list, tuple, ndarray] time vector
+         y            [int, float, list, tuple, ndarray] drawodwn vector
+         name         [string] well name that is used as label for plot
+         description  [string] well description
+        """
+        new_well = _wells.PumpingWell(name=name, description=description, time_units=self.time_units,
+                                      len_units=self.len_units, pump_units=self.pump_units)
+        new_well.pumprate.set_data(x=x, y=y)
+        self.wells.append(new_well)
+
+    def add_data(self):
         pass
 
     def convert_units(self):
         pass
 
-    def delete_well(self):
+    def delete_well(self, key):
+        """
+        Removes the well object from the associated wells list
+        given the well's name or index
+        """
+        if type(key) is str:
+            idx = self.get_well_id(key)
+        elif type(key) is int:
+            idx = key
+        else:
+            raise TypeError('key must be a string or an integer.')
+        n = self.well_count()
+        if 0 <= idx <= n - 1:
+            raise ValueError('Bad value for key parameter')
+        del(self.wells[idx])
+
+    def delete_data(self):
         pass
 
     def delete_all_wells(self):
+        """
+        Removes all the associated pumping wells
+        """
+        self.wells = []
+
+    def delete_all_data(self):
         pass
 
-    def get_well_id(self):
+    def get_well_id(self, name):
+        """
+        Returns the well id given a well name
+        Only the first well with similar name is returned
+        When well's name is not found, -1 is returned
+        """
+        idx = -1
+        if type(name) is str:
+            wells_names = self.wells_list()
+            if name in wells_names:
+                idx = wells_names.index(name)
+        return(idx)
+
+    def get_data_id(self):
         pass
 
-    def get_well_name(self):
+    def get_well_name(self, idx):
+        """
+        Returns well's name using the data index as input
+        If well index does not exist then None is returned
+        """
+        n = self.well_count()
+        assert 0 <= idx <= n - 1, "Bad well index"
+        name = self.wells[idx].pumprate.name
+        return(name)
+
+    def get_data_name(self):
         pass
 
-    def well_list(self):
-        pass
+    def set_parameters(self, T=None, S=None, K=None, b=None, Krz=None):
+        """
+        Set aquifer parameters
+        When an error in input parameter is found, old values are preserved
 
-    def set_parameters(self):
-        pass
+        INPUTS:
+         T      [float] transmisivity
+         S      [float] specific yield
+         K      [float] hydraulic conductivity
+         b      [float] aquifer thickness
+         Krz    [float] vertical anisotropy
+
+         NOTE: if T is None and K and b are not None, T is estimated as T=K*b
+         If K is None and T and b are not None, K is estimated as K=T/b
+        """
+        original = _deepcopy(self.parameters)  # save in case of error
+        in_parameters = {'T': T,
+                         'S': S,
+                         'K': K,
+                         'b': b,
+                         'Krz': Krz}
+        for key, value in in_parameters.items():
+            if value is not None:
+                self.parameters[key] = float(value)
+        flag, warnings = self.validate_parameters()
+        if not flag:
+            self.parameters.update(original)
+        if (self.parameters.get('T', None) is None and (self.parameters.get('K', None) is not None and
+                                                        self.parameters.get('b', None) is not None)):
+            self.parameters['T'] = self.parameters['K'] * self.parameters['b']
+        if (self.parameters.get('K', None) is None and (self.parameters.get('T', None) is not None and
+                                                        self.parameters.get('b', None) is not None)):
+            self.parameters['K'] = self.parameters['T'] / self.parameters['b']
+        # End Function
 
     def to_dict(self):
         pass
 
     def to_model(self):
-        pass
+        """
+        Returns a dictionary with aquifer parameters needed in models
+        """
+        out_dict = _deepcopy(self.parameters)
+        out_dict["atype"] = self.atype
+        return(out_dict)
 
     def update(self):
         pass
 
     def validate_parameters(self):
-        pass
+        """
+        Verify aquifer parameters and returns warnings according to
+        possible errors
+
+        OUTPUTS:
+         flag       [bool] if an error is detected in parameters
+                      then flag is returned as False, in other way True
+         warnings   [string] warnings text
+        """
+        flag = True
+        warnings = ""
+        for key in AQ_PARAMS.keys():
+            value = self.parameters.get(key, None)
+            if value is None:
+                warnings += "Parameter {} has been defined for optimization\n".format(key)
+            elif type(value) not in [int, float]:
+                flag = False
+                warnings += "Parameter {} must be a float value\n".format(key)
+            else:
+                if value <= 0:
+                    flag = False
+                    warnings += "Parameter {} must be higher than 0\n".format(key)
+            return(flag, warnings)
 
     def well_count(self):
+        """
+        Returns the number of associated wells
+        """
         return(len(self.wells))
 
+    def data_count(self):
+        pass
 
-class ConfinedAquifer(Aquifer):
-    def __init__(self):
-        self.atype = 0  # confined aquifer id
+    def wells_list(self):
+        """
+        Returns a list with the wells' name
+        """
+        list_names = []
+        for well_data in self.wells:
+            list_names.append(well_data.pumprate.name)
+        return(list_names)
 
-
-class LeakyAquifer(Aquifer):
-    def __init__(self, **kwargs):
-        self.atype = 1  # leaky aquifer id
-        self.__dict__update({'Kl': kwargs.get('Kl', None),  # aquitard conductivity
-                             'bl': kwargs.get('bl', None)   # aquitard thickness
-                            })
-
-
-class UnconfinedAquifer(Aquifer):
-    def __init__(self):
-        self.atype = 2  # unconfined aquifer id
+    def data_list(self):
+        pass

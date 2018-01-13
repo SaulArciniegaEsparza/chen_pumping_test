@@ -35,3 +35,4 @@ models.interpretation.smooth._BSKF = utilities.BSpline.BSFK
 
 structure.wells._units = utilities.units
 structure.aquifers._units = utilities.units
+structure.data._units = utilities.units

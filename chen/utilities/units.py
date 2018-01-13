@@ -121,17 +121,20 @@ def units_conversion(x, in_unit='m3/day', out_unit='l/s'):
         xc = x * LEN_FACTORS[in_unit[0]][out_unit[0]]
     elif flag_in == 1:  # time
         xc = x * TIME_FACTORS[in_unit[0]][out_unit[0]]
-    elif flag_in == 2:  # pumping rate
+    elif flag_in == 2:  # length^3/time
         xc = (x * VOL_FACTORS[in_unit[0]][out_unit[0]] /
               TIME_FACTORS[in_unit[1]][out_unit[1]])
-    elif flag_in == 3:  # first derivative
+    elif flag_in == 3:  # length/time
         xc = (x * LEN_FACTORS[in_unit[0]][out_unit[0]] /
               TIME_FACTORS[in_unit[1]][out_unit[1]])
-    elif flag_in == 4:  # second derivative
+    elif flag_in == 4:  # length/time^2
         xc = (x * VOL_FACTORS[in_unit[0]][out_unit[0]] /
               (TIME_FACTORS[in_unit[1]][out_unit[1]] ** 2.0))
-    elif flag_in == 5:  # volumeric
+    elif flag_in == 5:  # length^3
         xc = x * VOL_FACTORS[in_unit[0]][out_unit[0]]
+    elif flag_in == 6:  # length^2/time
+        xc = (x * LEN_FACTORS[in_unit[0]][out_unit[0]] ** 2.0 /
+              (TIME_FACTORS[in_unit[1]][out_unit[1]]))
     return(xc)  # units_conversion()
 
 
@@ -141,14 +144,15 @@ def validate_units(unit):
     INPUTS
      unit     [string] input unit
     OUTPUT
-     flag     [int] output flag
+     flag     [int] output flag depending of unit type
                -1  is not a valid unit
-                0  length unit [length]
-                1  time unit [time]
-                2  pumping rate unit [length^3/time]
-                3  first derivative unit [length/time]
-                4  second derivative unit [length/time]
-                5  volumetric units [lenght^3]
+                0  length
+                1  time
+                2  length^3/time
+                3  length/time
+                4  length/time^2
+                5  length^3 (volume)
+                6  length^2/time
     """
 
     if type(unit) is not str:
@@ -160,20 +164,22 @@ def validate_units(unit):
     # Check available units
     if n == 2:
         if unit[0] in VOL_FACTORS and unit[1] in TIME_FACTORS:
-            return(2)  # pumping rate units
+            return(2)  # length^3/time
         elif unit[0] in LEN_FACTORS and unit[1] in TIME_FACTORS:
-            return(3)  # first derivate units
-        elif unit[0] in LEN_FACTORS and unit[1] in TIME_FACTORS + '2':
-            return(4)  # second derivate units
+            return(3)  # length/time
+        elif unit[0] in LEN_FACTORS and unit[1] in [key + '2' for key in TIME_FACTORS.keys()]:
+            return(4)  # length/time^2
+        elif unit[0] in [key + '2' for key in LEN_FACTORS.keys()] and unit[1] in TIME_FACTORS:
+            return(6)  # length^2/time
         else:
             return(-1)
     elif n == 1:
         if unit[0] in LEN_FACTORS:
-            return(0)  # length units
+            return(0)  # length
         elif unit[0] in TIME_FACTORS:
-            return(1)  # time units
+            return(1)  # time
         elif unit[0] in VOL_FACTORS:
-            return(5)  # time units
+            return(5)  # length^3
         else:
             return(-1)
     else:
