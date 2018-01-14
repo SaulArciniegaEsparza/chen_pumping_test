@@ -8,7 +8,7 @@ CLASSES:
 See help for more information about how to work with each object
 
 
-Autor:
+Author:
 Saul Arciniega Esparza
 zaul.ae@gmail.com
 Institute of Engineering of UNAM
@@ -179,8 +179,8 @@ class Data(object):
         options['dtype'] = self.dtype
         return(options)
 
-    def import_data_from_file(self, filename, delimiter=',', skip_header=1,
-                              xunits=None, yunits=None):
+    def from_file(self, filename, delimiter=',', skip_header=1,
+                  xunits=None, yunits=None):
         """
         Load time and data from a delimited file
 
@@ -353,6 +353,30 @@ class Data(object):
                            'parameters': _deepcopy(self.parameters),
                            'plot_options': _deepcopy(self._graph)}
         return(data_properties)
+
+    def to_file(self, filename, delimiter=','):
+        """
+        Exports the data to a delimiter file
+
+        INPUTS:
+          filename     [string] output delimited file (.txt, .csv)
+          delimiter    [string] delimiter, by default ',' is used
+        """
+        if type(filename) is not str:
+            raise TypeError("filename must be a string, a <{}> input".format(type(filename)))
+        delim = delimiter
+        with open(filename, 'w') as fout:
+            fout.write('Name{}{}\n'.format(delim, self.name))
+            fout.write('Description{}{}\n'.format(delim, self.description))
+            fout.write('Data type{}{}\n'.format(delim, self.get_data_type()))
+            fout.write('X units{}{}\n'.format(delim, self.xunits))
+            fout.write('Y units{}{}\n'.format(delim, self.yunits))
+            fout.write('Parameters\n')
+            for key, value in self.parameters.items():
+                fout.write('{}{}{}\n'.format(key, delim, self.xunits))
+            fout.write('\nX{}Y'.format(delim))
+            for i in range(self.x.size):
+                fout.write('\n{}{}{}'.format(self.x[i], delim, self.y[i]))
 
     def update(self, new_data):
         """

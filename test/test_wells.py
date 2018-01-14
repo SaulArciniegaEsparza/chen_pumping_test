@@ -45,7 +45,7 @@ FILE1 = os.path.join(PATH2, 'data1.csv')  # archivo de datos
 PW.add_well(wtype=WTYPE, name=NAME, description=DESC)
 OW = PW.wells[-1]  # obtener ultimo pozo, recien creado
 OW.set_parameters(**PARAMS)
-OW.drawdown.import_data_from_file(FILE1, delimiter=',')
+OW.drawdown.from_file(FILE1, delimiter=',')
 
 x, y = OW.drawdown.get_data()
 print(x, y)  # imprimir datos
@@ -75,7 +75,7 @@ FILE2 = os.path.join(PATH2, 'data3.csv')  # archivo de datos
 PW.add_well(wtype=WTYPE, name=NAME, description=DESC)
 P = PW.wells[-1]  # obtener ultimo pozo, recien creado
 P.set_parameters(**PARAMS)
-P.drawdown.import_data_from_file(FILE2, delimiter=',')
+P.drawdown.from_file(FILE2, delimiter=',')
 
 
 # Guardar todo como un diccionario

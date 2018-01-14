@@ -876,7 +876,7 @@ class Piezometer(ObservationWell):
         Optionally:
         well = Piezometer(name="Piezometer 1", description="First piezometer added",
                           time_units="s", len_units="m")
-        well.drawdown.import_data_from_file(filename, delimiter=',', skip_header=1)
+        well.drawdown.from_file(filename, delimiter=',', skip_header=1)
         well.set_parameters(r=50., d=5., l=15., full=False)
 
         Adding new data:

@@ -3,7 +3,7 @@ CHEN pumping test analysis
 Aquifer properties initialization
 
 
-Autor:
+Author:
 Saul Arciniega Esparza
 zaul.ae@gmail.com
 Institute of Engineering of UNAM
@@ -12,7 +12,6 @@ Mexico City, Mexico
 
 from copy import deepcopy as _deepcopy
 import wells as _wells
-from data import Data as _Data
 
 
 """____________________________ WELL OBJECTS _______________________________"""
@@ -27,17 +26,30 @@ AQ_PARAMS = {'T': None,
 
 
 class Aquifer(object):
-
     def __init__(self, name="Aquifer", description="", time_units="s",
                  len_units="m", pump_units="m3/s", **kwargs):
         """
+        Creates an aquifer object that could contains one or more pumping wells
 
-        ATRIBUTES:
+        INPUTS:
+            name            [string] aquifer name
+            description     [string] aquifer description
+            time_units      [string] time units used
+            len_units       [string] length units used
+            pump_units      [string] pumping rate units used
+            **kwargs        [dict] aquifer parameters that can contain
+                              'T'    aquifer transmisivity
+                              'S'    aquifer specific yield
+                              'K'    aquifer hydraulic conductivity
+                              'b'    aquifer thickness
+                              'Kzr'  vertical anisotropy Krz=Kv/K
+        ATTRIBUTES:
             atype           [int] aquifer identifier
                              0  undefined aquifer (default)
                              1  confined aquifer
                              2  leaky aquifer
                              3  unconfined aquifer
+        Aquifer type is defined when a model is fitted or evaluated
         """
 
         # Set attributes
@@ -118,9 +130,6 @@ class Aquifer(object):
         new_well.pumprate.set_data(x=x, y=y)
         self.wells.append(new_well)
 
-    def add_data(self):
-        pass
-
     def convert_units(self):
         pass
 
@@ -140,17 +149,11 @@ class Aquifer(object):
             raise ValueError('Bad value for key parameter')
         del(self.wells[idx])
 
-    def delete_data(self):
-        pass
-
     def delete_all_wells(self):
         """
         Removes all the associated pumping wells
         """
         self.wells = []
-
-    def delete_all_data(self):
-        pass
 
     def get_well_id(self, name):
         """
@@ -165,9 +168,6 @@ class Aquifer(object):
                 idx = wells_names.index(name)
         return(idx)
 
-    def get_data_id(self):
-        pass
-
     def get_well_name(self, idx):
         """
         Returns well's name using the data index as input
@@ -177,9 +177,6 @@ class Aquifer(object):
         assert 0 <= idx <= n - 1, "Bad well index"
         name = self.wells[idx].pumprate.name
         return(name)
-
-    def get_data_name(self):
-        pass
 
     def set_parameters(self, T=None, S=None, K=None, b=None, Krz=None):
         """
@@ -217,7 +214,16 @@ class Aquifer(object):
         # End Function
 
     def to_dict(self):
-        pass
+        """
+        Returns a dictionary with all the data contained by the aquifer
+        (including pumping wells). It could be used to save data into a .json file
+        """
+        out_dict = _deepcopy(self.__dict__)
+        out_wells = []
+        for i in range(self.well_count()):
+            out_wells.append(self.wells[i].to_dict())
+        out_dict["wells"] = out_wells
+        return(out_dict)
 
     def to_model(self):
         """
@@ -227,8 +233,42 @@ class Aquifer(object):
         out_dict["atype"] = self.atype
         return(out_dict)
 
-    def update(self):
-        pass
+    def to_file(self, filename):
+        if type(filename) is not str:
+            raise TypeError('filename must be a string')
+        with open(filename, 'w') as fout:
+            fout.write('###################CHEN PUMPING TEST######################\n\n')
+            fout.write(str(self))
+            for i in range(self.well_count()):
+                fout.write('__________________________________________Pumping Well\n\n')
+                fout.write(str(self.wells[i]) + '\n\n')
+                for j in range(self.wells[i].well_count()):
+                    fout.write(str(self.wells[i].wells[j]) + '\n\n')
+                    for k in range(self.wells[i].wells[j].data_count()):
+                        fout.write(str(self.wells[i].wells[j].data[k]) + '\n\n')
+        # End Function
+
+    def update(self, new_data):
+        """
+        Updates the aquifer object using an input dictionary
+        """
+        if type(new_data) is not dict:
+            raise TypeError("Input parameter must be a dict")
+        # Update parameters
+        self._type = new_data.get("_type", self._type)
+        self.time_units = new_data.get("time_units", self.time_units)
+        self.len_units = new_data.get("len_units", self.len_units)
+        self.pump_units = new_data.get("pump_units", self.pump_units)
+        self.parameters = new_data.get("parameters", self.parameters)
+        # Update pumping wells
+        if "wells" in new_data:
+            n = len(new_data["wells"])
+            if n > 1:
+                self.delete_all_wells()
+                for i in range(n):
+                    self.add_well()
+                    self.wells[i].update(new_data["wells"][i])
+        # End Function
 
     def validate_parameters(self):
         """
@@ -261,9 +301,6 @@ class Aquifer(object):
         """
         return(len(self.wells))
 
-    def data_count(self):
-        pass
-
     def wells_list(self):
         """
         Returns a list with the wells' name
@@ -273,5 +310,3 @@ class Aquifer(object):
             list_names.append(well_data.pumprate.name)
         return(list_names)
 
-    def data_list(self):
-        pass

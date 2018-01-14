@@ -13,7 +13,7 @@ PumpingWell is the main object, so it would be created in first instance
 
 
 
-Autor:
+Author:
 Saul Arciniega Esparza
 zaul.ae@gmail.com
 Institute of Engineering of UNAM
@@ -310,8 +310,8 @@ class PumpingWell(object):
 
     def to_dict(self):
         """
-        Returns a list of dictionaries containing all the data in
-        the well that can be used to storage the data as json format
+        Returns a dictionary with all the data contained by the pumping well
+        (including observation wells). It could be used to save data into a .json file
         """
         out_dict = _deepcopy(self.__dict__)
         out_dict["pumprate"] = self.pumprate.to_dict()
@@ -876,7 +876,7 @@ class Piezometer(ObservationWell):
         Optionally:
         well = Piezometer(name="Piezometer 1", description="First piezometer added",
                           time_units="s", len_units="m")
-        well.drawdown.import_data_from_file(filename, delimiter=',', skip_header=1)
+        well.drawdown.from_file(filename, delimiter=',', skip_header=1)
         well.set_parameters(r=50., d=5., l=15., full=False)
 
         Adding new data:
